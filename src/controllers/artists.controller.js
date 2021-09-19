@@ -1,149 +1,145 @@
-const Models = require("../models")
+const Models = require('../models')
 const Artist = Models.Artist
 
 module.exports = {
-	getAllArtists: async (request, response) => {
-		let statusCode = 200
+  getAllArtists: async (request, response) => {
+    let statusCode = 200
 
-		try {
-			const artists = await Artist.findAll()
+    try {
+      const artists = await Artist.findAll()
 
-			console.log(`GET with status code ${statusCode} in /api/v1/artist endpoint`)
+      console.log(`GET with status code ${statusCode} in /api/v1/artist endpoint`)
 
-			response
-				.status(statusCode)
-				.json(artists)
+      response
+        .status(statusCode)
+        .json(artists)
+    } catch (error) {
+      const { message } = error
+      statusCode = 500
 
-		} catch (error) {
-			const {message} = error
-			statusCode = 500
+      console.error(`GET with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
 
-			console.error(`GET with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
+      response
+        .status(statusCode)
+        .json({ message })
+    }
+  },
+  saveArtist: async (request, response) => {
+    let statusCode = 201
 
-			response
-				.status(statusCode)
-				.json({message})
-		}
-	},
-	saveArtist: async (request, response) => {
-		let statusCode = 201
+    try {
+      const { name, description, code, image } = request.body
 
-		try {
+      const hasValues = (name && description && code && image)
+      if (!hasValues) {
+        return response
+          .status(400)
+          .json({ message: 'Bad Request' })
+      }
 
-			const {name, description, code, image} = request.body
+      const artistData = {
+        ...request.body
+      }
+      const artist = await Artist.create(artistData)
 
-			const hasValues = (name && description && code && image)
-			if (!hasValues) {
-				return response
-						.status(400)
-						.json({message: "Bad Request"})
-			}
+      console.log(`POST with status code ${statusCode} in /api/v1/artist endpoint`)
 
-			const artistData = {
-				...request.body
-			}
-			const artist = await Artist.create(artistData)
+      response
+        .status(statusCode)
+        .json(artist)
+    } catch (error) {
+      const { message } = error
+      statusCode = 500
 
-			console.log(`POST with status code ${statusCode} in /api/v1/artist endpoint`)
+      console.error(`POST with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
 
-			response
-				.status(statusCode)
-				.json(artist)
+      response
+        .status(statusCode)
+        .json({ message })
+    }
+  },
+  updateArtist: async (request, response) => {
+    let statusCode = 200
+    const { params } = request
 
-		} catch (error) {
-			const {message} = error
-			statusCode = 500
+    try {
+      const artist = await Artist.findOne({
+        where: {
+          id: params.id
+        }
+      })
 
-			console.error(`POST with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
+      if (artist === null) {
+        return response.status(404).json({ message: `Artist with id ${params.id} not found` })
+      }
 
-			response
-				.status(statusCode)
-				.json({message})
-		}
-	},
-	updateArtist: async (request, response) => {
-		let statusCode = 200
-		const {params} = request
+      const artistData = {
+        ...request.body
+      }
+      const artistUpdated = await Artist.update(artistData, {
+        where: {
+          id: artist.id
+        }
+      })
 
-		try {
-			const artist = await Artist.findOne({
-				where: {
-					id: params.id
-				}
-			})
+      console.log(`PUT with status code ${statusCode} in /api/v1/artist endpoint`)
 
-			if (artist === null) {
-				return response.status(404).json({message: `Artist with id ${params.id} not found`})
-			}
+      response
+        .status(statusCode)
+        .json(artistUpdated)
+    } catch (error) {
+      const { message } = error
+      statusCode = 500
 
-			const artistData = {
-				...request.body
-			}
-			const artistUpdated = await Artist.update(artistData, {
-				where: {
-					id: artist.id
-				}
-			})
+      console.error(`PUT with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
 
-			console.log(`PUT with status code ${statusCode} in /api/v1/artist endpoint`)
+      response
+        .status(statusCode)
+        .json({ message })
+    }
+  },
+  removeArtist: async (request, response) => {
+    let statusCode = 200
+    const { params } = request
 
-			response
-				.status(statusCode)
-				.json(artistUpdated)
+    try {
+      const artist = await Artist.findOne({
+        where: {
+          id: params.id
+        }
+      })
 
-		} catch (error) {
-			const {message} = error
-			statusCode = 500
+      if (artist === null) {
+        return response.status(404).json({ message: `Artist with id ${params.id} not found` })
+      }
 
-			console.error(`PUT with status code ${statusCode} in /api/v1/artist endpoint. Error: ${message}`)
+      await Artist.destroy({
+        where: {
+          id: artist.id
+        }
+      })
 
-			response
-				.status(statusCode)
-				.json({message})
-		}
-	},
-	removeArtist: async (request, response) => {
-		let statusCode = 200
-		const {params} = request
+      console.log(`DELETE with status code ${statusCode} in /api/v1/artist/${params.id} endpoint`)
 
-		try {
-			const artist = await Artist.findOne({
-				where: {
-					id: params.id
-				}
-			})
+      response
+        .status(statusCode)
+        .send() // <-- error! esto provoca que se cuelgue el servidor. Debemos usar send() o json() para cortar la conexión.
 
-			if (artist === null) {
-				return response.status(404).json({message: `Artist with id ${params.id} not found`})
-			}
+      /*
+        ¿Qué nivel de pruebas es el indicado para NUNCA MÁS COMETER ESTE ERROR?
+        - Integración
+        - Unitarias
+        - End-to-End (e2e)
+      */
+    } catch (error) {
+      const { message } = error
+      statusCode = 500
 
-			await Artist.destroy({
-				where: {
-					id: artist.id
-				}
-			})
+      console.error(`DELETE with status code ${statusCode} in /api/v1/artists/${params.id} endpoint. Error: ${message}`)
 
-			console.log(`DELETE with status code ${statusCode} in /api/v1/artist/${params.id} endpoint`)
-
-			response
-				.status(statusCode)
-				.send() //<-- error! esto provoca que se cuelgue el servidor. Debemos usar send() o json() para cortar la conexión.
-
-			/*
-			  ¿Qué nivel de pruebas es el indicado para NUNCA MÁS COMETER ESTE ERROR?
-				- Integración
-				- Unitarias
-				- End-to-End (e2e)
-			*/
-		} catch (error) {
-			const {message} = error
-			statusCode = 500
-
-			console.error(`DELETE with status code ${statusCode} in /api/v1/artists/${params.id} endpoint. Error: ${message}`)
-
-			response
-				.status(statusCode)
-				.json({message})
-		}
-	}
+      response
+        .status(statusCode)
+        .json({ message })
+    }
+  }
 }
